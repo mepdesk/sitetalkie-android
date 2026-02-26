@@ -167,6 +167,8 @@ fun MessageInput(
     onSendVoiceNote: (String?, String?, String) -> Unit,
     onSendImageNote: (String?, String?, String) -> Unit,
     onSendFileNote: (String?, String?, String) -> Unit,
+    pendingAttachment: PendingAttachment?,
+    onPendingAttachmentChanged: (PendingAttachment?) -> Unit,
     selectedPrivatePeer: String?,
     currentChannel: String?,
     nickname: String,
@@ -175,15 +177,22 @@ fun MessageInput(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isFocused = remember { mutableStateOf(false) }
-    val hasText = value.text.isNotBlank() // Check if there's text for send button state
+    val hasText = value.text.isNotBlank()
+    val hasPendingAttachment = pendingAttachment != null
+    // Send is enabled when there's text OR a pending attachment (but not for oversized docs)
+    val isSendEnabled = hasText || (hasPendingAttachment && !(pendingAttachment is PendingAttachment.Document && pendingAttachment.fileSize > 1_000_000L))
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     var isRecording by remember { mutableStateOf(false) }
     var elapsedMs by remember { mutableStateOf(0L) }
     var amplitude by remember { mutableStateOf(0) }
 
+    // Track latest peer/channel values for use in callbacks
+    val latestSelectedPeer = rememberUpdatedState(selectedPrivatePeer)
+    val latestChannel = rememberUpdatedState(currentChannel)
+
     Row(
-        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp), // Reduced padding
+        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -191,7 +200,6 @@ fun MessageInput(
         Box(
             modifier = Modifier.weight(1f)
         ) {
-            // Always keep the text field mounted to retain focus and avoid IME collapse
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -201,8 +209,8 @@ fun MessageInput(
                 ),
                 cursorBrush = SolidColor(if (isRecording) Color.Transparent else colorScheme.primary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { 
-                    if (hasText) onSend() // Only send if there's text
+                keyboardActions = KeyboardActions(onSend = {
+                    if (isSendEnabled) onSend()
                 }),
                 visualTransformation = CombinedVisualTransformation(
                     listOf(SlashCommandVisualTransformation(), MentionVisualTransformation())
@@ -222,7 +230,7 @@ fun MessageInput(
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontFamily = FontFamily.Monospace
                     ),
-                    color = colorScheme.onSurface.copy(alpha = 0.5f), // Muted grey
+                    color = colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -238,7 +246,7 @@ fun MessageInput(
                     val secs = (elapsedMs / 1000).toInt()
                     val mm = secs / 60
                     val ss = secs % 60
-                    val maxSecs = 10 // 10 second max recording time
+                    val maxSecs = 10
                     val maxMm = maxSecs / 60
                     val maxSs = maxSecs % 60
                     Text(
@@ -250,32 +258,20 @@ fun MessageInput(
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.width(8.dp)) // Reduced spacing
-        
-        // Voice and image buttons when no text (only visible in Mesh chat)
-        if (value.text.isEmpty() && showMediaButtons) {
-            // Hold-to-record microphone
-            val bg = Color(0xFFE8960C).copy(alpha = 0.75f) // Amber voice button
 
-            // Ensure latest values are used when finishing recording
-            val latestSelectedPeer = rememberUpdatedState(selectedPrivatePeer)
-            val latestChannel = rememberUpdatedState(currentChannel)
-            val latestOnSendVoiceNote = rememberUpdatedState(onSendVoiceNote)
+        Spacer(modifier = Modifier.width(8.dp))
 
-            // Image button (image picker) - hide during recording
+        // Show media capture buttons when no text, no pending attachment, and media allowed
+        if (value.text.isEmpty() && !hasPendingAttachment && showMediaButtons) {
+            val bg = Color(0xFFE8960C).copy(alpha = 0.75f)
+
+            // Image button - hide during recording
             if (!isRecording) {
-                // Revert to original separate buttons: round File button (left) and the old Image plus button (right)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // DISABLE FILE PICKER
-                    //FilePickerButton(
-                    //    onFileReady = { path ->
-                    //        onSendFileNote(latestSelectedPeer.value, latestChannel.value, path)
-                    //    }
-                    //)
                     ImagePickerButton(
                         onImageReady = { outPath ->
-                            onSendImageNote(latestSelectedPeer.value, latestChannel.value, outPath)
+                            // Stage for preview instead of sending immediately
+                            onPendingAttachmentChanged(PendingAttachment.Photo(outPath))
                         }
                     )
                 }
@@ -288,7 +284,6 @@ fun MessageInput(
                 onStart = {
                     isRecording = true
                     elapsedMs = 0L
-                    // Keep existing focus to avoid IME collapse, but do not force-show keyboard
                     if (isFocused.value) {
                         try { focusRequester.requestFocus() } catch (_: Exception) {}
                     }
@@ -299,41 +294,61 @@ fun MessageInput(
                 },
                 onFinish = { path ->
                     isRecording = false
-                    // Extract and cache waveform from the actual audio file to match receiver rendering
+                    val recordedDuration = elapsedMs
+                    // Extract and cache waveform
                     AudioWaveformExtractor.extractAsync(path, sampleCount = 120) { arr ->
                         if (arr != null) {
                             try { com.bitchat.android.features.voice.VoiceWaveformCache.put(path, arr) } catch (_: Exception) {}
                         }
                     }
-                    // BLE path (private or public) — use latest values to avoid stale captures
-                    latestOnSendVoiceNote.value(
-                        latestSelectedPeer.value,
-                        latestChannel.value,
-                        path
-                    )
+                    // Stage for preview instead of sending immediately
+                    onPendingAttachmentChanged(PendingAttachment.VoiceNote(path, recordedDuration))
                 }
             )
-            
+
         } else {
-            // Send button with enabled/disabled state
+            // Send button — enabled when text or valid pending attachment
             IconButton(
-                onClick = { if (hasText) onSend() }, // Only execute if there's text
-                enabled = hasText, // Enable only when there's text
+                onClick = {
+                    if (isSendEnabled) {
+                        // If pending attachment, dispatch it first
+                        if (hasPendingAttachment) {
+                            when (pendingAttachment) {
+                                is PendingAttachment.Photo -> onSendImageNote(
+                                    latestSelectedPeer.value,
+                                    latestChannel.value,
+                                    pendingAttachment.filePath
+                                )
+                                is PendingAttachment.VoiceNote -> onSendVoiceNote(
+                                    latestSelectedPeer.value,
+                                    latestChannel.value,
+                                    pendingAttachment.filePath
+                                )
+                                is PendingAttachment.Document -> onSendFileNote(
+                                    latestSelectedPeer.value,
+                                    latestChannel.value,
+                                    pendingAttachment.filePath
+                                )
+                            }
+                            onPendingAttachmentChanged(null) // Clear after sending
+                        }
+                        // Also send text if present
+                        if (hasText) onSend()
+                    }
+                },
+                enabled = isSendEnabled,
                 modifier = Modifier.size(32.dp)
             ) {
-                // Update send button to match input field colors
                 Box(
                     modifier = Modifier
                         .size(30.dp)
                         .background(
-                            color = if (!hasText) {
-                                // Disabled state - muted grey
+                            color = if (!isSendEnabled) {
                                 colorScheme.onSurface.copy(alpha = 0.3f)
                             } else if (selectedPrivatePeer != null || currentChannel != null) {
-                                // Orange for both private messages and channels when enabled
                                 Color(0xFFFF9500).copy(alpha = 0.75f)
                             } else {
-                                Color(0xFFE8960C).copy(alpha = 0.75f) // Amber for mesh send
+                                Color(0xFFE8960C).copy(alpha = 0.75f)
                             },
                             shape = CircleShape
                         ),
@@ -343,14 +358,12 @@ fun MessageInput(
                         imageVector = Icons.Filled.ArrowUpward,
                         contentDescription = stringResource(id = R.string.send_message),
                         modifier = Modifier.size(20.dp),
-                        tint = if (!hasText) {
-                            // Disabled state - muted grey icon
+                        tint = if (!isSendEnabled) {
                             colorScheme.onSurface.copy(alpha = 0.5f)
                         } else if (selectedPrivatePeer != null || currentChannel != null) {
-                            // Black arrow on orange for both private and channel modes
                             Color.Black
                         } else {
-                            Color.Black // Black arrow on amber
+                            Color.Black
                         }
                     )
                 }

@@ -445,6 +445,9 @@ fun ChatInputSection(
     colorScheme: ColorScheme,
     showMediaButtons: Boolean
 ) {
+    // Pending attachment state — lives here so preview bar and input share it
+    var pendingAttachment by remember { mutableStateOf<PendingAttachment?>(null) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = colorScheme.background
@@ -469,6 +472,18 @@ fun ChatInputSection(
                 )
                 HorizontalDivider(color = colorScheme.outline.copy(alpha = 0.2f))
             }
+            // Attachment preview bar (photo, voice note, or document)
+            AttachmentPreviewBar(
+                attachment = pendingAttachment,
+                onDiscard = {
+                    val att = pendingAttachment
+                    if (att is PendingAttachment.VoiceNote) {
+                        try { java.io.File(att.filePath).delete() } catch (_: Exception) {}
+                    }
+                    pendingAttachment = null
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
             MessageInput(
                 value = messageText,
                 onValueChange = onMessageTextChange,
@@ -476,6 +491,8 @@ fun ChatInputSection(
                 onSendVoiceNote = onSendVoiceNote,
                 onSendImageNote = onSendImageNote,
                 onSendFileNote = onSendFileNote,
+                pendingAttachment = pendingAttachment,
+                onPendingAttachmentChanged = { pendingAttachment = it },
                 selectedPrivatePeer = selectedPrivatePeer,
                 currentChannel = currentChannel,
                 nickname = nickname,
