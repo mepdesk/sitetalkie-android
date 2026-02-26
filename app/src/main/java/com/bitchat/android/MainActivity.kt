@@ -41,8 +41,8 @@ import com.bitchat.android.ui.ChatViewModel
 import com.bitchat.android.ui.MainTabScreen
 import com.bitchat.android.ui.OrientationAwareActivity
 import com.bitchat.android.ui.SetupScreen
-import com.bitchat.android.ui.SplashDestination
 import com.bitchat.android.ui.SplashScreen
+import com.bitchat.android.ui.hasCompletedSetup
 import com.bitchat.android.ui.theme.BitchatTheme
 import com.bitchat.android.nostr.PoWPreferenceManager
 import com.bitchat.android.services.VerificationService
@@ -291,7 +291,8 @@ class MainActivity : OrientationAwareActivity() {
             }
 
             OnboardingState.CHECKING, OnboardingState.INITIALIZING -> {
-                InitializingScreen(modifier)
+                // Show the animated splash screen while initializing
+                SplashScreen(onNavigate = { /* ignore — navigation handled by onboarding state */ })
             }
 
             OnboardingState.COMPLETE -> {
@@ -313,20 +314,14 @@ class MainActivity : OrientationAwareActivity() {
                 // Add the callback - this will be automatically removed when the activity is destroyed
                 onBackPressedDispatcher.addCallback(this, backCallback)
 
-                // App navigation: Splash → Setup (first run) → MainTabScreen
-                var appScreen by remember { mutableStateOf("splash") }
+                // App navigation: Setup (first run) or MainTabScreen (returning user)
+                var appScreen by remember {
+                    mutableStateOf(
+                        if (hasCompletedSetup(context)) "main" else "setup"
+                    )
+                }
 
                 when (appScreen) {
-                    "splash" -> {
-                        SplashScreen(
-                            onNavigate = { destination ->
-                                appScreen = when (destination) {
-                                    SplashDestination.SETUP -> "setup"
-                                    SplashDestination.MAIN -> "main"
-                                }
-                            }
-                        )
-                    }
                     "setup" -> {
                         SetupScreen(
                             onSetupComplete = { appScreen = "main" }
