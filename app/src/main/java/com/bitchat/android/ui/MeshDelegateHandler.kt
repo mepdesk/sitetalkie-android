@@ -22,7 +22,8 @@ class MeshDelegateHandler(
     private val onHapticFeedback: () -> Unit,
     private val getMyPeerID: () -> String,
     private val getMeshService: () -> BluetoothMeshService,
-    private val onSiteAlertDetected: (SiteAlert) -> Unit = {}
+    private val onSiteAlertDetected: (SiteAlert) -> Unit = {},
+    private val onSitePinReceived: (SitePin) -> Unit = {}
 ) : BluetoothMeshDelegate {
 
     override fun didReceiveMessage(message: BitchatMessage) {
@@ -33,6 +34,15 @@ class MeshDelegateHandler(
                 if (parsed != null) {
                     val alertWithSender = parsed.copy(senderName = message.sender)
                     onSiteAlertDetected(alertWithSender)
+                }
+            }
+
+            // Site pin detection — save received pins locally and register geofences
+            if (message.content.startsWith("[SITE_PIN:")) {
+                val parsed = parseSitePin(message.content)
+                if (parsed != null) {
+                    val pinWithSender = parsed.copy(createdBy = message.sender)
+                    onSitePinReceived(pinWithSender)
                 }
             }
 

@@ -131,5 +131,11 @@
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Geofence transition receiver for site pins -->
+        <receiver
+            android:name=".ui.GeofenceBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false" />
     </application>
 </manifest>

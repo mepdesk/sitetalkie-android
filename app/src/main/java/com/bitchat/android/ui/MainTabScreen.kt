@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.CellTower
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private enum class MainTab(
@@ -27,6 +29,7 @@ private enum class MainTab(
 ) {
     CHAT("Chat", Icons.Default.ChatBubble),
     NEARBY("Nearby", Icons.Default.CellTower),
+    SITE("Site", Icons.Default.LocationOn),
     PEOPLE("People", Icons.Default.People),
     SETTINGS("Settings", Icons.Default.Settings)
 }
@@ -50,6 +53,7 @@ fun MainTabScreen(viewModel: ChatViewModel) {
                 when (selectedTab) {
                     MainTab.CHAT -> ChatScreen(viewModel = viewModel)
                     MainTab.NEARBY -> NearbyRadarScreen(viewModel = viewModel)
+                    MainTab.SITE -> SiteScreen(viewModel = viewModel)
                     MainTab.PEOPLE -> PeopleScreen(
                         viewModel = viewModel,
                         onNavigateToChat = { selectedTab = MainTab.CHAT }
@@ -133,12 +137,32 @@ private fun TabItem(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = tab.icon,
-                    contentDescription = tab.label,
-                    tint = color,
-                    modifier = Modifier.size(22.dp)
-                )
+                if (tab == MainTab.SITE) {
+                    // Site tab: slightly larger icon with amber circle background
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .background(
+                                color = if (isSelected) ActiveTabColor.copy(alpha = 0.25f) else Color.Transparent,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.label,
+                            tint = color,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    Icon(
+                        imageVector = tab.icon,
+                        contentDescription = tab.label,
+                        tint = color,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = tab.label,

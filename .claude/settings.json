@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" ./gradlew assembleDebug)"
+      "Bash(JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" ./gradlew assembleDebug)",
+      "Bash(ls /Users/ron/sitetalkie-android/app/src/main/res/drawable*)"
     ]
   }
 }

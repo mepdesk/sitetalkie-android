@@ -91,6 +91,10 @@ class ChatViewModel(
     private val transferMessageMap = mutableMapOf<String, String>()
     private val messageTransferMap = mutableMapOf<String, String>()
 
+    // Site pin management
+    val sitePinStore = SitePinStore(application.applicationContext)
+    val pinGeofenceManager = PinGeofenceManager(application.applicationContext)
+
     // Specialized managers
     private val dataManager = DataManager(application.applicationContext)
     private val identityManager by lazy { SecureIdentityStateManager(getApplication()) }
@@ -137,7 +141,12 @@ class ChatViewModel(
         onHapticFeedback = { ChatViewModelUtils.triggerHapticFeedback(application.applicationContext) },
         getMyPeerID = { meshService.myPeerID },
         getMeshService = { meshService },
-        onSiteAlertDetected = { alert -> emitSiteAlert(alert) }
+        onSiteAlertDetected = { alert -> emitSiteAlert(alert) },
+        onSitePinReceived = { pin ->
+            sitePinStore.addPin(pin)
+            pinGeofenceManager.registerGeofence(pin)
+            android.util.Log.d("ChatViewModel", "Received pin from mesh: ${pin.title} by ${pin.createdBy}")
+        }
     )
     
     // New Geohash architecture ViewModel (replaces God object service usage in UI path)
