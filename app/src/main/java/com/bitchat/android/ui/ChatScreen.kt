@@ -59,6 +59,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val privateChatSheetPeer by viewModel.privateChatSheetPeer.collectAsStateWithLifecycle()
     val showVerificationSheet by viewModel.showVerificationSheet.collectAsStateWithLifecycle()
     val showSecurityVerificationSheet by viewModel.showSecurityVerificationSheet.collectAsStateWithLifecycle()
+    val showMessageLimit by viewModel.showMessageLimitBanner.collectAsStateWithLifecycle()
 
     var messageText by remember { mutableStateOf(TextFieldValue("")) }
     var showPasswordPrompt by remember { mutableStateOf(false) }
@@ -74,6 +75,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
     var initialViewerIndex by remember { mutableStateOf(0) }
     var forceScrollToBottom by remember { mutableStateOf(false) }
     var isScrolledUp by remember { mutableStateOf(false) }
+    var hasNewMessagesWhileScrolled by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showChannelSidebar by remember { mutableStateOf(false) }
     var showSiteAlertComposer by remember { mutableStateOf(false) }
 
     // Show password dialog when needed
@@ -99,6 +104,30 @@ fun ChatScreen(viewModel: ChatViewModel) {
             } else {
                 messages // Mesh timeline
             }
+        }
+    }
+
+    // Filter messages when search is active
+    val searchFilteredMessages = remember(displayMessages, searchQuery, isSearchActive) {
+        if (!isSearchActive || searchQuery.isBlank()) {
+            displayMessages
+        } else {
+            displayMessages.filter {
+                it.content.contains(searchQuery, ignoreCase = true) ||
+                it.sender.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    // Track new messages arriving while user is scrolled up
+    LaunchedEffect(displayMessages.size) {
+        if (isScrolledUp && displayMessages.isNotEmpty()) {
+            hasNewMessagesWhileScrolled = true
+        }
+    }
+    LaunchedEffect(isScrolledUp) {
+        if (!isScrolledUp) {
+            hasNewMessagesWhileScrolled = false
         }
     }
 
@@ -130,9 +159,25 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     .height(headerHeight)
             )
 
+            // Encryption badge - sticky below header, does not scroll
+            EncryptionBadge()
+
+            // Search bar - shown when search is active
+            if (isSearchActive) {
+                MessageSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    resultCount = searchFilteredMessages.size,
+                    onClose = {
+                        isSearchActive = false
+                        searchQuery = ""
+                    }
+                )
+            }
+
             // Messages area - takes up available space, will compress when keyboard appears
             MessagesList(
-                messages = displayMessages,
+                messages = searchFilteredMessages,
                 currentUserNickname = nickname,
                 meshService = viewModel.meshService,
                 modifier = Modifier.weight(1f),
@@ -183,6 +228,16 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     showFullScreenImageViewer = true
                 }
             )
+            // Message limit banner - above input when 50+ messages sent
+            if (showMessageLimit) {
+                val bannerContext = androidx.compose.ui.platform.LocalContext.current
+                MessageLimitBanner(
+                    onUpgradeClick = {
+                        android.widget.Toast.makeText(bannerContext, "Pro upgrade coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+
             // Input area - stays at bottom
         // Bridge file share from lower-level input to ViewModel
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -254,7 +309,9 @@ fun ChatScreen(viewModel: ChatViewModel) {
             onPanicClear = { viewModel.panicClearAllData() },
             onLocationChannelsClick = { showLocationChannelsSheet = true },
             onLocationNotesClick = { showLocationNotesSheet = true },
-            onSiteAlertClick = { showSiteAlertComposer = true }
+            onSiteAlertClick = { showSiteAlertComposer = true },
+            onSearchClick = { isSearchActive = true },
+            onChannelSidebarClick = { showChannelSidebar = true }
         )
 
         // Divider under header - positioned after status bar + header height
@@ -267,34 +324,21 @@ fun ChatScreen(viewModel: ChatViewModel) {
             color = colorScheme.outline.copy(alpha = 0.3f)
         )
 
-        // Scroll-to-bottom floating button
-        AnimatedVisibility(
+        // Scroll-to-bottom pill
+        ScrollToBottomPill(
             visible = isScrolledUp,
-            enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
+            hasNewMessages = hasNewMessagesWhileScrolled,
+            onClick = {
+                forceScrollToBottom = !forceScrollToBottom
+                hasNewMessagesWhileScrolled = false
+            },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 64.dp)
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 64.dp)
                 .zIndex(1.5f)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .windowInsetsPadding(WindowInsets.ime)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = colorScheme.background,
-                tonalElevation = 3.dp,
-                shadowElevation = 6.dp,
-                border = BorderStroke(2.dp, Color(0xFFE8960C))
-            ) {
-                IconButton(onClick = { forceScrollToBottom = !forceScrollToBottom }) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDownward,
-                        contentDescription = stringResource(com.bitchat.android.R.string.cd_scroll_to_bottom),
-                        tint = Color(0xFFE8960C)
-                    )
-                }
-            }
-        }
+        )
     }
 
     // Full-screen image viewer - separate from other sheets to allow image browsing without navigation
@@ -358,6 +402,17 @@ fun ChatScreen(viewModel: ChatViewModel) {
             }
         )
     }
+
+    // Channel Sidebar
+    ChannelSidebarSheet(
+        isVisible = showChannelSidebar,
+        currentChannel = currentChannel,
+        onChannelSelected = { channel ->
+            viewModel.switchToChannel(channel)
+            showChannelSidebar = false
+        },
+        onDismiss = { showChannelSidebar = false }
+    )
 
     // Site Alert Overlay is now shown in MainTabScreen on top of all tabs
 }
@@ -436,7 +491,9 @@ private fun ChatFloatingHeader(
     onPanicClear: () -> Unit,
     onLocationChannelsClick: () -> Unit,
     onLocationNotesClick: () -> Unit,
-    onSiteAlertClick: () -> Unit = {}
+    onSiteAlertClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    onChannelSidebarClick: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val locationManager = remember { com.bitchat.android.geohash.LocationChannelManager.getInstance(context) }
@@ -470,7 +527,9 @@ private fun ChatFloatingHeader(
                         locationManager.refreshChannels()
                         onLocationNotesClick()
                     },
-                    onSiteAlertClick = onSiteAlertClick
+                    onSiteAlertClick = onSiteAlertClick,
+                    onSearchClick = onSearchClick,
+                    onChannelSidebarClick = onChannelSidebarClick
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(

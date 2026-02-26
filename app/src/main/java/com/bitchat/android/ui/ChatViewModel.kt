@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import com.bitchat.android.mesh.BluetoothMeshDelegate
 import com.bitchat.android.mesh.BluetoothMeshService
 import com.bitchat.android.service.MeshServiceHolder
@@ -188,6 +191,15 @@ class ChatViewModel(
     val geohashPeople: StateFlow<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: StateFlow<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: StateFlow<Map<String, Int>> = state.geohashParticipantCounts
+
+    // Message limit tracking for free tier (50 message limit)
+    private val _sentMessageCount = MutableStateFlow(
+        application.getSharedPreferences("sitetalkie_prefs", android.content.Context.MODE_PRIVATE)
+            .getInt("sentMessageCount", 0)
+    )
+    val showMessageLimitBanner: StateFlow<Boolean> = _sentMessageCount
+        .map { it >= 50 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), _sentMessageCount.value >= 50)
 
     // Site alert detection — ViewModel-owned so alerts fire regardless of active tab
     private val _activeSiteAlert = MutableStateFlow<SiteAlert?>(null)
@@ -593,6 +605,12 @@ class ChatViewModel(
                 }
             }
         }
+
+        // Increment sent message count for free tier tracking
+        val newCount = _sentMessageCount.value + 1
+        _sentMessageCount.value = newCount
+        getApplication<Application>().getSharedPreferences("sitetalkie_prefs", android.content.Context.MODE_PRIVATE)
+            .edit().putInt("sentMessageCount", newCount).apply()
     }
 
     // MARK: - Utility Functions

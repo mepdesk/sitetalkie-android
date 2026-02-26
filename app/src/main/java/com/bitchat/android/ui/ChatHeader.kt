@@ -228,7 +228,9 @@ fun ChatHeaderContent(
     onShowAppInfo: () -> Unit,
     onLocationChannelsClick: () -> Unit,
     onLocationNotesClick: () -> Unit,
-    onSiteAlertClick: () -> Unit = {}
+    onSiteAlertClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    onChannelSidebarClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -239,7 +241,8 @@ fun ChatHeaderContent(
                 channel = currentChannel,
                 onBackClick = onBackClick,
                 onLeaveChannel = { viewModel.leaveChannel(currentChannel) },
-                onSidebarClick = onSidebarClick
+                onSidebarClick = onSidebarClick,
+                onSearchClick = onSearchClick
             )
         }
         else -> {
@@ -253,6 +256,8 @@ fun ChatHeaderContent(
                 onLocationChannelsClick = onLocationChannelsClick,
                 onLocationNotesClick = onLocationNotesClick,
                 onSiteAlertClick = onSiteAlertClick,
+                onSearchClick = onSearchClick,
+                onChannelSidebarClick = onChannelSidebarClick,
                 viewModel = viewModel
             )
         }
@@ -266,10 +271,11 @@ private fun ChannelHeader(
     channel: String,
     onBackClick: () -> Unit,
     onLeaveChannel: () -> Unit,
-    onSidebarClick: () -> Unit
+    onSidebarClick: () -> Unit,
+    onSearchClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    
+
     Box(modifier = Modifier.fillMaxWidth()) {
         // Back button - positioned all the way to the left with minimal margin
         Button(
@@ -278,10 +284,10 @@ private fun ChannelHeader(
                 containerColor = Color.Transparent,
                 contentColor = colorScheme.primary
             ),
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp), // Reduced horizontal padding
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .offset(x = (-8).dp) // Move even further left to minimize margin
+                .offset(x = (-8).dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -300,27 +306,37 @@ private fun ChannelHeader(
                 )
             }
         }
-        
+
         // Title - perfectly centered regardless of other elements
         Text(
             text = stringResource(R.string.chat_channel_prefix, channel),
             style = MaterialTheme.typography.titleMedium,
-            color = Color(0xFFFF9500), // Orange to match input field
+            color = Color(0xFFFF9500),
             modifier = Modifier
                 .align(Alignment.Center)
                 .clickable { onSidebarClick() }
         )
-        
-        // Leave button - positioned on the right
-        TextButton(
-            onClick = onLeaveChannel,
-            modifier = Modifier.align(Alignment.CenterEnd)
+
+        // Right actions: search + leave
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.chat_leave),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Red
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = "Search messages",
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable { onSearchClick() },
+                tint = colorScheme.primary
             )
+            TextButton(onClick = onLeaveChannel) {
+                Text(
+                    text = stringResource(R.string.chat_leave),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Red
+                )
+            }
         }
     }
 }
@@ -335,6 +351,8 @@ private fun MainHeader(
     onLocationChannelsClick: () -> Unit,
     onLocationNotesClick: () -> Unit,
     onSiteAlertClick: () -> Unit,
+    onSearchClick: () -> Unit = {},
+    onChannelSidebarClick: () -> Unit = {},
     viewModel: ChatViewModel
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -360,6 +378,16 @@ private fun MainHeader(
             modifier = Modifier.fillMaxHeight(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Hamburger menu for channel sidebar
+            Icon(
+                imageVector = Icons.Filled.Menu,
+                contentDescription = "Open channels",
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable { onChannelSidebarClick() },
+                tint = colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = stringResource(R.string.app_brand),
                 style = MaterialTheme.typography.headlineSmall,
@@ -369,9 +397,9 @@ private fun MainHeader(
                     onTripleClick = onTripleTitleClick
                 )
             )
-            
+
             Spacer(modifier = Modifier.width(2.dp))
-            
+
             NicknameEditor(
                 value = nickname,
                 onValueChange = onNicknameChange
@@ -383,6 +411,15 @@ private fun MainHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
+            // Search icon
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = "Search messages",
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable { onSearchClick() },
+                tint = colorScheme.primary
+            )
 
             // Unread private messages badge (click to open most recent DM)
             if (hasUnreadPrivateMessages.isNotEmpty()) {

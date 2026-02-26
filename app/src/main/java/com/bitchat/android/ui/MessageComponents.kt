@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import java.util.Calendar
  
 
 import androidx.compose.material3.*
@@ -107,6 +108,41 @@ fun MessagesList(
         }
     }
     
+    // Build interleaved list with date separators
+    data class DateSeparatorEntry(val id: String, val dateText: String)
+
+    val interleaved = remember(messages) {
+        val reversed = messages.asReversed() // newest at index 0 (reverseLayout)
+        val result = mutableListOf<Any>() // BitchatMessage or DateSeparatorEntry
+        for (i in reversed.indices) {
+            result.add(reversed[i])
+            // Check if next message (older) is on a different day
+            if (i < reversed.size - 1) {
+                val currentCal = Calendar.getInstance().apply { time = reversed[i].timestamp }
+                val nextCal = Calendar.getInstance().apply { time = reversed[i + 1].timestamp }
+                if (currentCal.get(Calendar.DAY_OF_YEAR) != nextCal.get(Calendar.DAY_OF_YEAR) ||
+                    currentCal.get(Calendar.YEAR) != nextCal.get(Calendar.YEAR)
+                ) {
+                    val dateText = formatDateSeparatorText(reversed[i].timestamp)
+                    result.add(DateSeparatorEntry(
+                        id = "sep_${currentCal.get(Calendar.YEAR)}_${currentCal.get(Calendar.DAY_OF_YEAR)}",
+                        dateText = dateText
+                    ))
+                }
+            }
+        }
+        // Add separator for the oldest message at the end
+        if (reversed.isNotEmpty()) {
+            val oldestCal = Calendar.getInstance().apply { time = reversed.last().timestamp }
+            val dateText = formatDateSeparatorText(reversed.last().timestamp)
+            result.add(DateSeparatorEntry(
+                id = "sep_${oldestCal.get(Calendar.YEAR)}_${oldestCal.get(Calendar.DAY_OF_YEAR)}",
+                dateText = dateText
+            ))
+        }
+        result
+    }
+
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
@@ -115,11 +151,18 @@ fun MessagesList(
         reverseLayout = true
     ) {
         items(
-            items = messages.asReversed(),
-            key = { it.id }
-        ) { message ->
-                MessageItem(
-                    message = message,
+            count = interleaved.size,
+            key = { index ->
+                when (val item = interleaved[index]) {
+                    is BitchatMessage -> item.id
+                    is DateSeparatorEntry -> item.id
+                    else -> index
+                }
+            }
+        ) { index ->
+            when (val item = interleaved[index]) {
+                is BitchatMessage -> MessageItem(
+                    message = item,
                     messages = messages,
                     currentUserNickname = currentUserNickname,
                     meshService = meshService,
@@ -128,6 +171,8 @@ fun MessagesList(
                     onCancelTransfer = onCancelTransfer,
                     onImageClick = onImageClick
                 )
+                is DateSeparatorEntry -> DateSeparatorItem(dateText = item.dateText)
+            }
         }
     }
 }
