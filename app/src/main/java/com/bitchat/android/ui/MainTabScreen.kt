@@ -36,7 +36,7 @@ private val TabBarBorder = Color(0xFF2A2C30)
 private val ActiveTabColor = Color(0xFFE8960C)
 private val InactiveTabColor = Color(0xFF5A5E66)
 private val ActivePillColor = Color(0x1AE8960C)
-private val PlaceholderTextColor = Color(0xFF8A8E96)
+
 
 @Composable
 fun MainTabScreen(viewModel: ChatViewModel) {
@@ -49,8 +49,11 @@ fun MainTabScreen(viewModel: ChatViewModel) {
             Box(modifier = Modifier.weight(1f)) {
                 when (selectedTab) {
                     MainTab.CHAT -> ChatScreen(viewModel = viewModel)
-                    MainTab.NEARBY -> NearbyPlaceholder()
-                    MainTab.PEOPLE -> PeoplePlaceholder()
+                    MainTab.NEARBY -> NearbyRadarScreen(viewModel = viewModel)
+                    MainTab.PEOPLE -> PeopleScreen(
+                        viewModel = viewModel,
+                        onNavigateToChat = { selectedTab = MainTab.CHAT }
+                    )
                     MainTab.SETTINGS -> SettingsScreen()
                 }
             }
@@ -148,58 +151,4 @@ private fun TabItem(
     }
 }
 
-@Composable
-private fun NearbyPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Nearby",
-            color = Color(0xFFF0F0F0),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 48.dp, bottom = 24.dp)
-        )
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Radar coming soon",
-                color = PlaceholderTextColor,
-                fontSize = 16.sp
-            )
-        }
-    }
-}
 
-@Composable
-private fun PeoplePlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "People",
-            color = Color(0xFFF0F0F0),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 48.dp, bottom = 24.dp)
-        )
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No one nearby",
-                color = PlaceholderTextColor,
-                fontSize = 16.sp
-            )
-        }
-    }
-}

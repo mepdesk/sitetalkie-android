@@ -276,8 +276,13 @@ class BluetoothMeshService(private val context: Context) {
                 return peerManager.getPeerInfo(peerID)
             }
             
-            override fun updatePeerInfo(peerID: String, nickname: String, noisePublicKey: ByteArray, signingPublicKey: ByteArray, isVerified: Boolean): Boolean {
-                return peerManager.updatePeerInfo(peerID, nickname, noisePublicKey, signingPublicKey, isVerified)
+            override fun updatePeerInfo(peerID: String, nickname: String, noisePublicKey: ByteArray, signingPublicKey: ByteArray, isVerified: Boolean, trade: String?): Boolean {
+                val result = peerManager.updatePeerInfo(peerID, nickname, noisePublicKey, signingPublicKey, isVerified)
+                // Store trade from TLV 0x05 on the peer object
+                if (trade != null) {
+                    peerManager.updatePeerTrade(peerID, trade)
+                }
+                return result
             }
             
             // Packet operations
@@ -1047,8 +1052,14 @@ class BluetoothMeshService(private val context: Context) {
                 return@launch
             }
             
-            // Create iOS-compatible IdentityAnnouncement with TLV encoding
-            val announcement = IdentityAnnouncement(nickname, staticKey, signingKey)
+            // Read user's trade from SharedPreferences for TLV 0x05
+            val trade = try {
+                context.getSharedPreferences("sitetalkie_prefs", android.content.Context.MODE_PRIVATE)
+                    .getString("com.sitetalkie.user.trade", null)
+            } catch (_: Exception) { null }
+
+            // Create iOS-compatible IdentityAnnouncement with TLV encoding (includes trade as TLV 0x05)
+            val announcement = IdentityAnnouncement(nickname, staticKey, signingKey, trade)
             var tlvPayload = announcement.encode()
             if (tlvPayload == null) {
                 Log.e(TAG, "Failed to encode announcement as TLV")
@@ -1068,21 +1079,21 @@ class BluetoothMeshService(private val context: Context) {
                         .updateFromAnnouncement(myPeerID, nickname, directPeers, System.currentTimeMillis().toULong())
                 } catch (_: Exception) { }
             } catch (_: Exception) { }
-            
+
             val announcePacket = BitchatPacket(
                 type = MessageType.ANNOUNCE.value,
                 ttl = MAX_TTL,
                 senderID = myPeerID,
                 payload = tlvPayload
             )
-            
+
             // Sign the packet using our signing key (exactly like iOS)
             val signedPacket = encryptionService.signData(announcePacket.toBinaryDataForSigning()!!)?.let { signature ->
                 announcePacket.copy(signature = signature)
             } ?: announcePacket
-            
+
             connectionManager.broadcastPacket(RoutedPacket(signedPacket))
-            Log.d(TAG, "Sent iOS-compatible signed TLV announce (${tlvPayload.size} bytes)")
+            Log.d(TAG, "Sent iOS-compatible signed TLV announce (${tlvPayload.size} bytes, trade=${trade ?: "none"})")
             // Track announce for sync
             try { gossipSyncManager.onPublicPacketSeen(signedPacket) } catch (_: Exception) { }
         }
@@ -1110,8 +1121,14 @@ class BluetoothMeshService(private val context: Context) {
             return
         }
         
-        // Create iOS-compatible IdentityAnnouncement with TLV encoding
-        val announcement = IdentityAnnouncement(nickname, staticKey, signingKey)
+        // Read user's trade from SharedPreferences for TLV 0x05
+        val trade = try {
+            context.getSharedPreferences("sitetalkie_prefs", android.content.Context.MODE_PRIVATE)
+                .getString("com.sitetalkie.user.trade", null)
+        } catch (_: Exception) { null }
+
+        // Create iOS-compatible IdentityAnnouncement with TLV encoding (includes trade as TLV 0x05)
+        val announcement = IdentityAnnouncement(nickname, staticKey, signingKey, trade)
         var tlvPayload = announcement.encode()
         if (tlvPayload == null) {
             Log.e(TAG, "Failed to encode peer announcement as TLV")
@@ -1131,22 +1148,22 @@ class BluetoothMeshService(private val context: Context) {
                     .updateFromAnnouncement(myPeerID, nickname, directPeers, System.currentTimeMillis().toULong())
             } catch (_: Exception) { }
         } catch (_: Exception) { }
-        
+
         val packet = BitchatPacket(
             type = MessageType.ANNOUNCE.value,
             ttl = MAX_TTL,
             senderID = myPeerID,
             payload = tlvPayload
         )
-        
+
         // Sign the packet using our signing key (exactly like iOS)
         val signedPacket = encryptionService.signData(packet.toBinaryDataForSigning()!!)?.let { signature ->
             packet.copy(signature = signature)
         } ?: packet
-        
+
         connectionManager.broadcastPacket(RoutedPacket(signedPacket))
         peerManager.markPeerAsAnnouncedTo(peerID)
-        Log.d(TAG, "Sent iOS-compatible signed TLV peer announce to $peerID (${tlvPayload.size} bytes)")
+        Log.d(TAG, "Sent iOS-compatible signed TLV peer announce to $peerID (${tlvPayload.size} bytes, trade=${trade ?: "none"})")
 
         // Track announce for sync
         try { gossipSyncManager.onPublicPacketSeen(signedPacket) } catch (_: Exception) { }
@@ -1233,6 +1250,13 @@ class BluetoothMeshService(private val context: Context) {
      */
     fun getPeerInfo(peerID: String): PeerInfo? {
         return peerManager.getPeerInfo(peerID)
+    }
+
+    /**
+     * Get all peers (snapshot) for People tab UI
+     */
+    fun getAllPeers(): Map<String, PeerInfo> {
+        return peerManager.getAllPeers()
     }
 
     /**

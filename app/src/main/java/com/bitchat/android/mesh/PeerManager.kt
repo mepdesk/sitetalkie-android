@@ -17,7 +17,8 @@ data class PeerInfo(
     var noisePublicKey: ByteArray?,
     var signingPublicKey: ByteArray?,      // NEW: Ed25519 public key for verification
     var isVerifiedNickname: Boolean,       // NEW: Verification status flag
-    var lastSeen: Long  // Using Long instead of Date for simplicity
+    var lastSeen: Long,  // Using Long instead of Date for simplicity
+    var trade: String? = null              // Trade from TLV 0x05 in announce packets
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -39,10 +40,11 @@ data class PeerInfo(
         } else if (other.signingPublicKey != null) return false
         if (isVerifiedNickname != other.isVerifiedNickname) return false
         if (lastSeen != other.lastSeen) return false
-        
+        if (trade != other.trade) return false
+
         return true
     }
-    
+
     override fun hashCode(): Int {
         var result = id.hashCode()
         result = 31 * result + nickname.hashCode()
@@ -52,6 +54,7 @@ data class PeerInfo(
         result = 31 * result + (signingPublicKey?.contentHashCode() ?: 0)
         result = 31 * result + isVerifiedNickname.hashCode()
         result = 31 * result + lastSeen.hashCode()
+        result = 31 * result + (trade?.hashCode() ?: 0)
         return result
     }
 }
@@ -185,6 +188,29 @@ class PeerManager {
      */
     fun refreshPeerList() {
         notifyPeerListUpdate()
+    }
+
+    /**
+     * Update trade for a peer (from TLV 0x05 in announce packets)
+     */
+    fun updatePeerTrade(peerID: String, trade: String?) {
+        peers[peerID]?.let { info ->
+            peers[peerID] = info.copy(trade = trade)
+        }
+    }
+
+    /**
+     * Get trade for a peer
+     */
+    fun getPeerTrade(peerID: String): String? {
+        return peers[peerID]?.trade
+    }
+
+    /**
+     * Get all peers (snapshot) for UI consumption
+     */
+    fun getAllPeers(): Map<String, PeerInfo> {
+        return peers.toMap()
     }
 
     // MARK: - Legacy Methods (maintained for compatibility)

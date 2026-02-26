@@ -106,7 +106,19 @@ fun formatMessageAsAnnotatedString(
             builder.append(suffix)
             builder.pop()
         }
-        
+
+        // Trade badge: " · Trade" in secondary grey if peer has a trade set
+        val trade = message.senderPeerID?.let { meshService.getPeerInfo(it)?.trade }
+        if (!trade.isNullOrEmpty()) {
+            builder.pushStyle(SpanStyle(
+                color = Color(0xFF8A8E96),
+                fontSize = BASE_FONT_SIZE.sp,
+                fontWeight = FontWeight.Normal
+            ))
+            builder.append(" · $trade")
+            builder.pop()
+        }
+
         // Sender suffix "> "
         builder.pushStyle(SpanStyle(
             color = baseColor,
@@ -115,7 +127,7 @@ fun formatMessageAsAnnotatedString(
         ))
         builder.append("> ")
         builder.pop()
-        
+
         // Message content with iOS-style hashtag and mention highlighting
         appendIOSFormattedContent(builder, message.content, message.mentions, currentUserNickname, baseColor, isSelf, isDark)
         
@@ -213,6 +225,18 @@ fun formatMessageHeaderAnnotatedString(
                 fontWeight = if (isSelf) FontWeight.Bold else FontWeight.Medium
             ))
             builder.append(suffix)
+            builder.pop()
+        }
+
+        // Trade badge: " · Trade" in secondary grey if peer has a trade set
+        val headerTrade = message.senderPeerID?.let { meshService.getPeerInfo(it)?.trade }
+        if (!headerTrade.isNullOrEmpty()) {
+            builder.pushStyle(SpanStyle(
+                color = Color(0xFF8A8E96),
+                fontSize = BASE_FONT_SIZE.sp,
+                fontWeight = FontWeight.Normal
+            ))
+            builder.append(" · $headerTrade")
             builder.pop()
         }
 
