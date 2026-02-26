@@ -6,8 +6,11 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bitchat.android.favorites.FavoritesPersistenceService
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.bitchat.android.mesh.BluetoothMeshDelegate
 import com.bitchat.android.mesh.BluetoothMeshService
@@ -130,7 +133,8 @@ class ChatViewModel(
         coroutineScope = viewModelScope,
         onHapticFeedback = { ChatViewModelUtils.triggerHapticFeedback(application.applicationContext) },
         getMyPeerID = { meshService.myPeerID },
-        getMeshService = { meshService }
+        getMeshService = { meshService },
+        onSiteAlertDetected = { alert -> emitSiteAlert(alert) }
     )
     
     // New Geohash architecture ViewModel (replaces God object service usage in UI path)
@@ -184,6 +188,18 @@ class ChatViewModel(
     val geohashPeople: StateFlow<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: StateFlow<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: StateFlow<Map<String, Int>> = state.geohashParticipantCounts
+
+    // Site alert detection — ViewModel-owned so alerts fire regardless of active tab
+    private val _activeSiteAlert = MutableStateFlow<SiteAlert?>(null)
+    val activeSiteAlert: StateFlow<SiteAlert?> = _activeSiteAlert.asStateFlow()
+
+    fun emitSiteAlert(alert: SiteAlert) {
+        _activeSiteAlert.value = alert
+    }
+
+    fun dismissSiteAlert() {
+        _activeSiteAlert.value = null
+    }
 
     init {
         // Note: Mesh service delegate is now set by MainActivity

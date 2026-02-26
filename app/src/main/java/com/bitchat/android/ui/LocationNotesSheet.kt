@@ -53,7 +53,7 @@ fun LocationNotesSheet(
     val isDark = isSystemInDarkTheme()
     
     // iOS color scheme
-    val accentGreen = if (isDark) Color.Green else Color(0xFF008000) // dark: green, light: dark green (0, 0.5, 0)
+    val accentGreen = Color(0xFFE8960C) // SiteTalkie amber
     
     // Managers
     val notesManager = remember { LocationNotesManager.getInstance() }

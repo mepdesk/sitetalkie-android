@@ -67,7 +67,7 @@ fun PoWStatusIndicator(
                     Icon(
                         imageVector = Icons.Filled.Security,
                         contentDescription = stringResource(R.string.cd_pow_enabled),
-                        tint = if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D), // Green when ready
+                        tint = Color(0xFFE8960C), // Amber when ready
                         modifier = Modifier.size(12.dp)
                     )
                 }
@@ -90,7 +90,7 @@ fun PoWStatusIndicator(
                         imageVector = Icons.Filled.Security,
                         contentDescription = stringResource(R.string.cd_proof_of_work),
                         tint = if (isMining) Color(0xFFFF9500) else {
-                            if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D)
+                            Color(0xFFE8960C)
                         },
                         modifier = Modifier.size(14.dp)
                     )

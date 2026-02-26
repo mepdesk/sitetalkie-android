@@ -81,7 +81,7 @@ fun FileSendingAnimation(
         Icon(
             imageVector = Icons.Filled.Description,
             contentDescription = stringResource(R.string.cd_file),
-            tint = Color(0xFF00C851), // Green like app theme
+            tint = Color(0xFFE8960C), // Amber like app theme
             modifier = Modifier.size(32.dp)
         )
 

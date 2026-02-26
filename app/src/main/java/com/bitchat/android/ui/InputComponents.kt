@@ -256,7 +256,7 @@ fun MessageInput(
         // Voice and image buttons when no text (only visible in Mesh chat)
         if (value.text.isEmpty() && showMediaButtons) {
             // Hold-to-record microphone
-            val bg = if (colorScheme.background == Color.Black) Color(0xFF00FF00).copy(alpha = 0.75f) else Color(0xFF008000).copy(alpha = 0.75f)
+            val bg = Color(0xFFE8960C).copy(alpha = 0.75f) // Amber voice button
 
             // Ensure latest values are used when finishing recording
             val latestSelectedPeer = rememberUpdatedState(selectedPrivatePeer)
@@ -332,10 +332,8 @@ fun MessageInput(
                             } else if (selectedPrivatePeer != null || currentChannel != null) {
                                 // Orange for both private messages and channels when enabled
                                 Color(0xFFFF9500).copy(alpha = 0.75f)
-                            } else if (colorScheme.background == Color.Black) {
-                                Color(0xFF00FF00).copy(alpha = 0.75f) // Bright green for dark theme
                             } else {
-                                Color(0xFF008000).copy(alpha = 0.75f) // Dark green for light theme
+                                Color(0xFFE8960C).copy(alpha = 0.75f) // Amber for mesh send
                             },
                             shape = CircleShape
                         ),
@@ -351,10 +349,8 @@ fun MessageInput(
                         } else if (selectedPrivatePeer != null || currentChannel != null) {
                             // Black arrow on orange for both private and channel modes
                             Color.Black
-                        } else if (colorScheme.background == Color.Black) {
-                            Color.Black // Black arrow on bright green in dark theme
                         } else {
-                            Color.White // White arrow on dark green in light theme
+                            Color.Black // Black arrow on amber
                         }
                     )
                 }

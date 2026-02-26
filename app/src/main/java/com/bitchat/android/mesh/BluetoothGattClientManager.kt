@@ -224,13 +224,13 @@ class BluetoothGattClientManager(
             return
         }
         
-        val scanFilter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(AppConstants.Mesh.Gatt.SERVICE_UUID))
-            .build()
-        
-        val scanFilters = listOf(scanFilter) 
-        
-        Log.d(TAG, "Starting BLE scan with target service UUID: ${AppConstants.Mesh.Gatt.SERVICE_UUID}")
+        val scanFilters = AppConstants.Mesh.Gatt.SCAN_SERVICE_UUIDS.map { uuid ->
+            ScanFilter.Builder()
+                .setServiceUuid(ParcelUuid(uuid))
+                .build()
+        }
+
+        Log.d(TAG, "Starting BLE scan with ${scanFilters.size} service UUIDs: ${AppConstants.Mesh.Gatt.SCAN_SERVICE_UUIDS}")
         
         scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -314,14 +314,18 @@ class BluetoothGattClientManager(
         val deviceAddress = device.address
         val scanRecord = result.scanRecord
         
-        // CRITICAL: Only process devices that have our service UUID
-        val hasOurService = scanRecord?.serviceUuids?.any { it.uuid == AppConstants.Mesh.Gatt.SERVICE_UUID } == true
+        // CRITICAL: Only process devices that advertise one of our service UUIDs
+        val acceptedUuids = AppConstants.Mesh.Gatt.SCAN_SERVICE_UUIDS.toSet()
+        val hasOurService = scanRecord?.serviceUuids?.any { it.uuid in acceptedUuids } == true
         if (!hasOurService) {
             return
         }
 
         // Try to extract peerID from Service Data (if available) for stable identity
-        val serviceData = scanRecord?.getServiceData(ParcelUuid(AppConstants.Mesh.Gatt.SERVICE_UUID))
+        // Check both production and iOS debug UUIDs for service data
+        val serviceData = AppConstants.Mesh.Gatt.SCAN_SERVICE_UUIDS.firstNotNullOfOrNull { uuid ->
+            scanRecord?.getServiceData(ParcelUuid(uuid))
+        }
         val peerID = if (serviceData != null && serviceData.size >= 8) {
             serviceData.joinToString("") { "%02x".format(it) }
         } else {
@@ -469,9 +473,10 @@ class BluetoothGattClientManager(
                 }
             }
 
-            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {                
+            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    val service = gatt.getService(AppConstants.Mesh.Gatt.SERVICE_UUID)
+                    // Try production UUID first, then iOS debug UUID
+                    val service = AppConstants.Mesh.Gatt.SCAN_SERVICE_UUIDS.firstNotNullOfOrNull { gatt.getService(it) }
                     if (service != null) {
                         val characteristic = service.getCharacteristic(AppConstants.Mesh.Gatt.CHARACTERISTIC_UUID)
                         if (characteristic != null) {

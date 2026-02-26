@@ -70,7 +70,7 @@ fun SecurityVerificationSheet(
     val peerSessionStates by viewModel.peerSessionStates.collectAsStateWithLifecycle()
 
     val isDark = isSystemInDarkTheme()
-    val accent = if (isDark) Color.Green else Color(0xFF008000)
+    val accent = Color(0xFFE8960C) // SiteTalkie amber
     val boxColor = if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.06f)
     val peerHexRegex = remember { Regex("^[0-9a-fA-F]{16}$") }
 
@@ -186,10 +186,10 @@ private fun buildStatusInfo(
         else -> Icons.Outlined.NoEncryption
     }
     val tint = when {
-        isVerified -> Color(0xFF32D74B)
+        isVerified -> Color(0xFFE8960C)
         sessionState == "failed" -> Color(0xFFFF3B30)
         sessionState == "handshaking" -> Color(0xFFFF9500)
-        sessionState == "established" -> Color(0xFF32D74B)
+        sessionState == "established" -> Color(0xFFE8960C)
         else -> accent.copy(alpha = 0.6f)
     }
     return SecurityStatusInfo(text, icon, tint)
@@ -266,9 +266,9 @@ private fun SecurityVerificationActions(
     if (isVerified) {
         VerificationStatusRow(
             icon = Icons.Filled.Verified,
-            iconTint = Color(0xFF32D74B),
+            iconTint = Color(0xFFE8960C),
             text = stringResource(R.string.fingerprint_verified_label),
-            textTint = Color(0xFF32D74B)
+            textTint = Color(0xFFE8960C)
         )
         Text(
             text = stringResource(R.string.fingerprint_verified_message),

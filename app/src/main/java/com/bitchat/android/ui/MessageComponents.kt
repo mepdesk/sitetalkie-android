@@ -144,9 +144,22 @@ fun MessageItem(
     onCancelTransfer: ((BitchatMessage) -> Unit)? = null,
     onImageClick: ((String, List<String>, Int) -> Unit)? = null
 ) {
+    // Site alert messages render as a styled banner instead of normal text
+    val parsedAlert = remember(message.content) {
+        if (message.content.startsWith("[SITE_ALERT:")) parseSiteAlert(message.content) else null
+    }
+    if (parsedAlert != null) {
+        SiteAlertBanner(
+            alert = parsedAlert,
+            senderName = message.sender,
+            timestamp = message.timestamp
+        )
+        return
+    }
+
     val colorScheme = MaterialTheme.colorScheme
     val timeFormatter = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
-    
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(0.dp)

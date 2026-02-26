@@ -21,11 +21,21 @@ class MeshDelegateHandler(
     private val coroutineScope: CoroutineScope,
     private val onHapticFeedback: () -> Unit,
     private val getMyPeerID: () -> String,
-    private val getMeshService: () -> BluetoothMeshService
+    private val getMeshService: () -> BluetoothMeshService,
+    private val onSiteAlertDetected: (SiteAlert) -> Unit = {}
 ) : BluetoothMeshDelegate {
 
     override fun didReceiveMessage(message: BitchatMessage) {
         coroutineScope.launch {
+            // Site alert detection — runs at ViewModel layer so alerts fire on any tab
+            if (message.content.startsWith("[SITE_ALERT:")) {
+                val parsed = parseSiteAlert(message.content)
+                if (parsed != null) {
+                    val alertWithSender = parsed.copy(senderName = message.sender)
+                    onSiteAlertDetected(alertWithSender)
+                }
+            }
+
             // FIXED: Deduplicate messages from dual connection paths
             val messageKey = messageManager.generateMessageKey(message)
             if (messageManager.isMessageProcessed(messageKey)) {

@@ -38,7 +38,11 @@ import com.bitchat.android.onboarding.PermissionExplanationScreen
 import com.bitchat.android.onboarding.PermissionManager
 import com.bitchat.android.ui.ChatScreen
 import com.bitchat.android.ui.ChatViewModel
+import com.bitchat.android.ui.MainTabScreen
 import com.bitchat.android.ui.OrientationAwareActivity
+import com.bitchat.android.ui.SetupScreen
+import com.bitchat.android.ui.SplashDestination
+import com.bitchat.android.ui.SplashScreen
 import com.bitchat.android.ui.theme.BitchatTheme
 import com.bitchat.android.nostr.PoWPreferenceManager
 import com.bitchat.android.services.VerificationService
@@ -286,7 +290,11 @@ class MainActivity : OrientationAwareActivity() {
                 )
             }
 
-            OnboardingState.CHECKING, OnboardingState.INITIALIZING, OnboardingState.COMPLETE -> {
+            OnboardingState.CHECKING, OnboardingState.INITIALIZING -> {
+                InitializingScreen(modifier)
+            }
+
+            OnboardingState.COMPLETE -> {
                 // Set up back navigation handling for the chat screen
                 val backCallback = object : OnBackPressedCallback(true) {
                     override fun handleOnBackPressed() {
@@ -304,7 +312,30 @@ class MainActivity : OrientationAwareActivity() {
 
                 // Add the callback - this will be automatically removed when the activity is destroyed
                 onBackPressedDispatcher.addCallback(this, backCallback)
-                ChatScreen(viewModel = chatViewModel)
+
+                // App navigation: Splash → Setup (first run) → MainTabScreen
+                var appScreen by remember { mutableStateOf("splash") }
+
+                when (appScreen) {
+                    "splash" -> {
+                        SplashScreen(
+                            onNavigate = { destination ->
+                                appScreen = when (destination) {
+                                    SplashDestination.SETUP -> "setup"
+                                    SplashDestination.MAIN -> "main"
+                                }
+                            }
+                        )
+                    }
+                    "setup" -> {
+                        SetupScreen(
+                            onSetupComplete = { appScreen = "main" }
+                        )
+                    }
+                    "main" -> {
+                        MainTabScreen(viewModel = chatViewModel)
+                    }
+                }
             }
             
             OnboardingState.ERROR -> {

@@ -97,7 +97,7 @@ private fun ThemeChip(
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
         color = if (selected) {
-            if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D)
+            Color(0xFFE8960C) // Amber accent
         } else {
             colorScheme.surfaceVariant.copy(alpha = 0.5f)
         }
@@ -182,7 +182,7 @@ private fun SettingsToggleRow(
             enabled = enabled,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D),
+                checkedTrackColor = Color(0xFFE8960C),
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = colorScheme.surfaceVariant
             )
@@ -318,50 +318,7 @@ fun AboutSheet(
                         }
                     }
 
-                    // Appearance Section
-                    item(key = "appearance") {
-                        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                            Text(
-                                text = "THEME",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colorScheme.onBackground.copy(alpha = 0.5f),
-                                letterSpacing = 0.5.sp,
-                                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
-                            )
-                            val themePref by com.bitchat.android.ui.theme.ThemePreferenceManager.themeFlow.collectAsState()
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = colorScheme.surface,
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    ThemeChip(
-                                        label = stringResource(R.string.about_system),
-                                        selected = themePref.isSystem,
-                                        onClick = { com.bitchat.android.ui.theme.ThemePreferenceManager.set(context, com.bitchat.android.ui.theme.ThemePreference.System) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    ThemeChip(
-                                        label = stringResource(R.string.about_light),
-                                        selected = themePref.isLight,
-                                        onClick = { com.bitchat.android.ui.theme.ThemePreferenceManager.set(context, com.bitchat.android.ui.theme.ThemePreference.Light) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    ThemeChip(
-                                        label = stringResource(R.string.about_dark),
-                                        selected = themePref.isDark,
-                                        onClick = { com.bitchat.android.ui.theme.ThemePreferenceManager.set(context, com.bitchat.android.ui.theme.ThemePreference.Dark) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    // Theme section removed — SiteTalkie is dark-only
 
                     // Settings Section - Unified Card with Toggles
                     item(key = "settings") {
@@ -440,7 +397,7 @@ fun AboutSheet(
                                         statusIndicator = if (torMode.value == TorMode.ON) {
                                             {
                                                 val statusColor = when {
-                                                    torStatus.running && torStatus.bootstrapPercent >= 100 -> if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D)
+                                                    torStatus.running && torStatus.bootstrapPercent >= 100 -> Color(0xFFE8960C)
                                                     torStatus.running -> Color(0xFFFF9500)
                                                     else -> Color(0xFFFF3B30)
                                                 }
@@ -509,8 +466,8 @@ fun AboutSheet(
                                             valueRange = 0f..32f,
                                             steps = 31,
                                             colors = SliderDefaults.colors(
-                                                thumbColor = if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D),
-                                                activeTrackColor = if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D)
+                                                thumbColor = Color(0xFFE8960C),
+                                                activeTrackColor = Color(0xFFE8960C)
                                             )
                                         )
                                         
@@ -556,7 +513,7 @@ fun AboutSheet(
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             val statusColor = when {
-                                                torStatus.running && torStatus.bootstrapPercent >= 100 -> if (isDark) Color(0xFF32D74B) else Color(0xFF248A3D)
+                                                torStatus.running && torStatus.bootstrapPercent >= 100 -> Color(0xFFE8960C)
                                                 torStatus.running -> Color(0xFFFF9500)
                                                 else -> Color(0xFFFF3B30)
                                             }

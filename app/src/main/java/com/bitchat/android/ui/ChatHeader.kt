@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bitchat.android.core.ui.utils.singleOrTripleClickable
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -168,14 +169,14 @@ fun PeerCounter(
         is com.bitchat.android.geohash.ChannelID.Location -> {
             // Geohash channel: show geohash participants
             val count = geohashPeople.size
-            val green = Color(0xFF00C851) // Standard green
+            val green = Color(0xFFE8960C) // Amber for active
             Pair(count, if (count > 0) green else Color.Gray)
         }
         is com.bitchat.android.geohash.ChannelID.Mesh,
         null -> {
             // Mesh channel: show Bluetooth-connected peers (excluding self)
             val count = connectedPeers.size
-            val meshBlue = Color(0xFF007AFF) // iOS-style blue for mesh
+            val meshBlue = Color(0xFFE8960C) // Amber for site channel
             Pair(count, if (isConnected && count > 0) meshBlue else Color.Gray)
         }
     }
@@ -207,7 +208,7 @@ fun PeerCounter(
             Text(
                 text = stringResource(R.string.channel_count_prefix) + "${joinedChannels.size}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isConnected) Color(0xFF00C851) else Color.Red,
+                color = if (isConnected) Color(0xFFE8960C) else Color.Red,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -226,7 +227,8 @@ fun ChatHeaderContent(
     onTripleClick: () -> Unit,
     onShowAppInfo: () -> Unit,
     onLocationChannelsClick: () -> Unit,
-    onLocationNotesClick: () -> Unit
+    onLocationNotesClick: () -> Unit,
+    onSiteAlertClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -250,6 +252,7 @@ fun ChatHeaderContent(
                 onSidebarClick = onSidebarClick,
                 onLocationChannelsClick = onLocationChannelsClick,
                 onLocationNotesClick = onLocationNotesClick,
+                onSiteAlertClick = onSiteAlertClick,
                 viewModel = viewModel
             )
         }
@@ -331,6 +334,7 @@ private fun MainHeader(
     onSidebarClick: () -> Unit,
     onLocationChannelsClick: () -> Unit,
     onLocationNotesClick: () -> Unit,
+    onSiteAlertClick: () -> Unit,
     viewModel: ChatViewModel
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -417,7 +421,7 @@ private fun MainHeader(
                         Icon(
                             imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                             contentDescription = stringResource(R.string.cd_toggle_bookmark),
-                            tint = if (isBookmarked) Color(0xFF00C851) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                            tint = if (isBookmarked) Color(0xFFE8960C) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -437,6 +441,16 @@ private fun MainHeader(
                     .padding(start = 0.dp, end = 2.dp)
             )
             
+            // Site Alert megaphone button
+            Icon(
+                imageVector = Icons.Filled.Campaign,
+                contentDescription = "Site Alert",
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable { onSiteAlertClick() },
+                tint = colorScheme.primary
+            )
+
             // PoW status indicator
             PoWStatusIndicator(
                 modifier = Modifier,
@@ -469,13 +483,13 @@ private fun LocationChannelsButton(
     
     val (badgeText, badgeColor) = when (selectedChannel) {
         is com.bitchat.android.geohash.ChannelID.Mesh -> {
-            "#mesh" to Color(0xFF007AFF) // iOS blue for mesh
+            "#site" to Color(0xFFE8960C) // Amber for site channel
         }
         is com.bitchat.android.geohash.ChannelID.Location -> {
             val geohash = (selectedChannel as com.bitchat.android.geohash.ChannelID.Location).channel.geohash
-            "#$geohash" to Color(0xFF00C851) // Green for location
+            "#$geohash" to Color(0xFFE8960C) // Amber for location
         }
-        null -> "#mesh" to Color(0xFF007AFF) // Default to mesh
+        null -> "#site" to Color(0xFFE8960C) // Default to site
     }
     
     Button(

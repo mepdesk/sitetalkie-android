@@ -417,6 +417,17 @@ class BluetoothMeshService(private val context: Context) {
                         }
                     } catch (_: Exception) { }
                 }
+
+                // Site alert background notification — fires when UI is not attached
+                if (delegate == null && message.content.startsWith("[SITE_ALERT:")) {
+                    try {
+                        val parsed = com.bitchat.android.ui.parseSiteAlert(message.content)
+                        if (parsed != null) {
+                            val alertWithSender = parsed.copy(senderName = message.sender)
+                            com.bitchat.android.ui.showSiteAlertNotification(context, alertWithSender)
+                        }
+                    } catch (_: Exception) { }
+                }
             }
             
             override fun onChannelLeave(channel: String, fromPeer: String) {
