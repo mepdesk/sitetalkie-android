@@ -1,6 +1,5 @@
 package com.bitchat.android.ui
 
-import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,9 +39,9 @@ fun ChannelSidebarSheet(
     isVisible: Boolean,
     currentChannel: String?,
     onChannelSelected: (String?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onProUpgrade: () -> Unit = {}
 ) {
-    val context = LocalContext.current
 
     // Dim overlay
     AnimatedVisibility(
@@ -178,11 +176,7 @@ fun ChannelSidebarSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            Toast
-                                .makeText(context, "Pro feature coming soon", Toast.LENGTH_SHORT)
-                                .show()
-                        }
+                        .clickable { onProUpgrade() }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -226,11 +220,7 @@ fun ChannelSidebarSheet(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .background(CardBackground, RoundedCornerShape(12.dp))
-                    .clickable {
-                        Toast
-                            .makeText(context, "Pro feature coming soon", Toast.LENGTH_SHORT)
-                            .show()
-                    }
+                    .clickable { onProUpgrade() }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

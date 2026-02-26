@@ -79,6 +79,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showChannelSidebar by remember { mutableStateOf(false) }
+    var showProUpgrade by remember { mutableStateOf(false) }
     var showSiteAlertComposer by remember { mutableStateOf(false) }
 
     // Show password dialog when needed
@@ -230,11 +231,8 @@ fun ChatScreen(viewModel: ChatViewModel) {
             )
             // Message limit banner - above input when 50+ messages sent
             if (showMessageLimit) {
-                val bannerContext = androidx.compose.ui.platform.LocalContext.current
                 MessageLimitBanner(
-                    onUpgradeClick = {
-                        android.widget.Toast.makeText(bannerContext, "Pro upgrade coming soon", android.widget.Toast.LENGTH_SHORT).show()
-                    }
+                    onUpgradeClick = { showProUpgrade = true }
                 )
             }
 
@@ -411,7 +409,17 @@ fun ChatScreen(viewModel: ChatViewModel) {
             viewModel.switchToChannel(channel)
             showChannelSidebar = false
         },
-        onDismiss = { showChannelSidebar = false }
+        onDismiss = { showChannelSidebar = false },
+        onProUpgrade = {
+            showChannelSidebar = false
+            showProUpgrade = true
+        }
+    )
+
+    // Pro Upgrade Sheet
+    ProUpgradeSheet(
+        isPresented = showProUpgrade,
+        onDismiss = { showProUpgrade = false }
     )
 
     // Site Alert Overlay is now shown in MainTabScreen on top of all tabs
